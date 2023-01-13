@@ -20,9 +20,9 @@ const NUM_G2_POINTS: usize = 65;
 #[derive(Debug)]
 pub enum Error {
     /// The KZG proof is invalid.
-    InvalidKZGProof(String),
+    InvalidKzgProof(String),
     /// The KZG commitment is invalid.
-    InvalidKZGCommitment(String),
+    InvalidKzgCommitment(String),
     /// The provided trusted setup is invalid.
     InvalidTrustedSetup(String),
     /// The underlying c-kzg library returned an error.
@@ -109,7 +109,7 @@ impl Drop for KZGSettings {
 impl KZGProof {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != BYTES_PER_PROOF {
-            return Err(Error::InvalidKZGProof(format!(
+            return Err(Error::InvalidKzgProof(format!(
                 "Invalid byte length. Expected {} got {}",
                 BYTES_PER_PROOF,
                 bytes.len(),
@@ -201,7 +201,7 @@ impl KZGProof {
 impl KZGCommitment {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != BYTES_PER_COMMITMENT {
-            return Err(Error::InvalidKZGCommitment(format!(
+            return Err(Error::InvalidKzgCommitment(format!(
                 "Invalid byte length. Expected {} got {}",
                 BYTES_PER_PROOF,
                 bytes.len(),

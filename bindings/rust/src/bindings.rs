@@ -11,76 +11,76 @@ pub const BYTES_PER_PROOF: usize = 48;
 pub const BYTES_PER_FIELD_ELEMENT: usize = 32;
 pub const BYTES_PER_BLOB: usize = FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT;
 
-pub type byte = u8;
-pub type limb_t = u64;
+type byte = u8;
+type limb_t = u64;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_scalar {
-    pub b: [byte; 32usize],
+struct blst_scalar {
+    b: [byte; 32usize],
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_fr {
-    pub l: [limb_t; 4usize],
+struct blst_fr {
+    l: [limb_t; 4usize],
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_fp {
-    pub l: [limb_t; 6usize],
+struct blst_fp {
+    l: [limb_t; 6usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_fp2 {
-    pub fp: [blst_fp; 2usize],
+struct blst_fp2 {
+    fp: [blst_fp; 2usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_fp6 {
-    pub fp2: [blst_fp2; 3usize],
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_fp12 {
-    pub fp6: [blst_fp6; 2usize],
+struct blst_fp6 {
+    fp2: [blst_fp2; 3usize],
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_p1 {
-    pub x: blst_fp,
-    pub y: blst_fp,
-    pub z: blst_fp,
+struct blst_fp12 {
+    fp6: [blst_fp6; 2usize],
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_p1_affine {
-    pub x: blst_fp,
-    pub y: blst_fp,
+struct blst_p1 {
+    x: blst_fp,
+    y: blst_fp,
+    z: blst_fp,
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_p2 {
-    pub x: blst_fp2,
-    pub y: blst_fp2,
-    pub z: blst_fp2,
+struct blst_p1_affine {
+    x: blst_fp,
+    y: blst_fp,
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct blst_p2_affine {
-    pub x: blst_fp2,
-    pub y: blst_fp2,
+struct blst_p2 {
+    x: blst_fp2,
+    y: blst_fp2,
+    z: blst_fp2,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+struct blst_p2_affine {
+    x: blst_fp2,
+    y: blst_fp2,
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct BLSFieldElement {
-    pub bytes: [u8; 32usize],
+    bytes: [u8; 32usize],
 }
 
 impl Deref for BLSFieldElement {
@@ -124,9 +124,9 @@ impl Deref for KZGProof {
 }
 
 pub const FIAT_SHAMIR_PROTOCOL_DOMAIN: &[u8; 17usize] = b"FSBLOBVERIFY_V1_\0";
-pub type g1_t = blst_p1;
-pub type g2_t = blst_p2;
-pub type fr_t = blst_fr;
+type g1_t = blst_p1;
+type g2_t = blst_p2;
+type fr_t = blst_fr;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct KZGCommitment {

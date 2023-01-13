@@ -175,8 +175,8 @@ impl KZGProof {
     pub fn verify_kzg_proof(
         &self,
         kzg_commitment: KZGCommitment,
-        z: [u8; BYTES_PER_FIELD_ELEMENT],
-        y: [u8; BYTES_PER_FIELD_ELEMENT],
+        z: BLSFieldElement,
+        y: BLSFieldElement,
         kzg_settings: &KZGSettings,
     ) -> Result<bool, Error> {
         let mut verified: MaybeUninit<bool> = MaybeUninit::uninit();
@@ -220,10 +220,14 @@ impl KZGCommitment {
         hex::encode(self.to_bytes())
     }
 
-    pub fn blob_to_kzg_commitment(mut blob: Blob, kzg_settings: &KZGSettings) -> Self {
+    pub fn blob_to_kzg_commitment(blob: Blob, kzg_settings: &KZGSettings) -> Self {
         let mut kzg_commitment: MaybeUninit<KZGCommitment> = MaybeUninit::uninit();
         unsafe {
-            blob_to_kzg_commitment(kzg_commitment.as_mut_ptr(), blob.as_mut_ptr(), kzg_settings);
+            blob_to_kzg_commitment(
+                kzg_commitment.as_mut_ptr(),
+                blob.as_ptr() as *mut Blob,
+                kzg_settings,
+            );
             kzg_commitment.assume_init()
         }
     }
@@ -243,6 +247,12 @@ impl From<[u8; BYTES_PER_PROOF]> for KZGProof {
 
 impl From<[u8; BYTES_PER_BLOB]> for Blob {
     fn from(value: [u8; BYTES_PER_BLOB]) -> Self {
+        Self { bytes: value }
+    }
+}
+
+impl From<[u8; BYTES_PER_FIELD_ELEMENT]> for BLSFieldElement {
+    fn from(value: [u8; BYTES_PER_FIELD_ELEMENT]) -> Self {
         Self { bytes: value }
     }
 }
@@ -385,7 +395,12 @@ mod tests {
             y_bytes.copy_from_slice(&hex::decode(y).unwrap());
 
             assert!(kzg_proof
-                .verify_kzg_proof(kzg_commitment, z_bytes, y_bytes, &kzg_settings)
+                .verify_kzg_proof(
+                    kzg_commitment,
+                    z_bytes.into(),
+                    y_bytes.into(),
+                    &kzg_settings
+                )
                 .unwrap());
         }
     }

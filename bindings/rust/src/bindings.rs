@@ -227,7 +227,7 @@ extern "C" {
 extern "C" {
     pub fn blob_to_kzg_commitment(
         out: *mut KZGCommitment,
-        blob: *mut u8,
+        blob: *const Blob,
         s: *const KZGSettings,
     ) -> C_KZG_RET;
 }

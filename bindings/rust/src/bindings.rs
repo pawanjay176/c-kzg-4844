@@ -94,7 +94,7 @@ impl Deref for BLSFieldElement {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Blob {
-    pub bytes: [u8; BYTES_PER_BLOB],
+    bytes: [u8; BYTES_PER_BLOB],
 }
 
 impl Deref for Blob {
@@ -113,7 +113,7 @@ impl DerefMut for Blob {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct KZGProof {
-    pub bytes: [u8; 48usize],
+    bytes: [u8; 48usize],
 }
 
 impl Deref for KZGProof {
@@ -130,7 +130,7 @@ pub type fr_t = blst_fr;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct KZGCommitment {
-    pub bytes: [u8; 48usize],
+    bytes: [u8; 48usize],
 }
 
 impl Deref for KZGCommitment {
@@ -162,13 +162,13 @@ pub enum C_KZG_RET {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FFTSettings {
     #[doc = "< The maximum size of FFT these settings support, a power of 2."]
-    pub max_width: u64,
+    max_width: u64,
     #[doc = "< Ascending powers of the root of unity, size `width + 1`."]
-    pub expanded_roots_of_unity: *const fr_t,
+    expanded_roots_of_unity: *const fr_t,
     #[doc = "< Descending powers of the root of unity, size `width + 1`."]
-    pub reverse_roots_of_unity: *const fr_t,
+    reverse_roots_of_unity: *const fr_t,
     #[doc = "< Powers of the root of unity in bit-reversal permutation, size `width`."]
-    pub roots_of_unity: *const fr_t,
+    roots_of_unity: *const fr_t,
 }
 
 #[doc = " Stores the setup and parameters needed for computing KZG proofs."]
@@ -176,11 +176,11 @@ pub struct FFTSettings {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KZGSettings {
     #[doc = "< The corresponding settings for performing FFTs"]
-    pub fs: *const FFTSettings,
+    fs: *const FFTSettings,
     #[doc = "< G1 group elements from the trusted setup, in Lagrange form bit-reversal permutation"]
-    pub g1_values: *const g1_t,
+    g1_values: *const g1_t,
     #[doc = "< G2 group elements from the trusted setup; both arrays have FIELD_ELEMENTS_PER_BLOB elements"]
-    pub g2_values: *const g2_t,
+    g2_values: *const g2_t,
 }
 
 /// Safety: FFTSettings is initialized once on calling `load_trusted_setup`. After

@@ -229,6 +229,24 @@ impl KZGCommitment {
     }
 }
 
+impl From<[u8; BYTES_PER_COMMITMENT]> for KZGCommitment {
+    fn from(value: [u8; BYTES_PER_COMMITMENT]) -> Self {
+        Self { bytes: value }
+    }
+}
+
+impl From<[u8; BYTES_PER_PROOF]> for KZGProof {
+    fn from(value: [u8; BYTES_PER_PROOF]) -> Self {
+        Self { bytes: value }
+    }
+}
+
+impl From<[u8; BYTES_PER_BLOB]> for Blob {
+    fn from(value: [u8; BYTES_PER_BLOB]) -> Self {
+        Self { bytes: value }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,7 +260,7 @@ mod tests {
         for i in 0..FIELD_ELEMENTS_PER_BLOB {
             arr[i * BYTES_PER_FIELD_ELEMENT + BYTES_PER_FIELD_ELEMENT - 1] = 0;
         }
-        Blob { bytes: arr }
+        arr.into()
     }
 
     fn test_simple(trusted_setup_file: PathBuf) {

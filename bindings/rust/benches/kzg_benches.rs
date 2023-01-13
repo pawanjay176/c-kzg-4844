@@ -13,7 +13,7 @@ fn generate_random_blob_for_bench(rng: &mut ThreadRng) -> Blob {
     for i in 0..FIELD_ELEMENTS_PER_BLOB {
         arr[i * BYTES_PER_FIELD_ELEMENT + BYTES_PER_FIELD_ELEMENT - 1] = 0;
     }
-    Blob { bytes: arr }
+    arr.into()
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {

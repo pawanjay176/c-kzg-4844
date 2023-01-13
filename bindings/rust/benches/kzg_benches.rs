@@ -6,14 +6,14 @@ use rand::{rngs::ThreadRng, Rng};
 use std::sync::Arc;
 
 fn generate_random_blob_for_bench(rng: &mut ThreadRng) -> Blob {
-    let mut arr: Blob = [0; BYTES_PER_BLOB];
+    let mut arr = [0u8; BYTES_PER_BLOB];
     rng.fill(&mut arr[..]);
     // Ensure that the blob is canonical by ensuring that
     // each field element contained in the blob is < BLS_MODULUS
     for i in 0..FIELD_ELEMENTS_PER_BLOB {
         arr[i * BYTES_PER_FIELD_ELEMENT + BYTES_PER_FIELD_ELEMENT - 1] = 0;
     }
-    arr
+    Blob { bytes: arr }
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {

@@ -2,18 +2,13 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-mod bindings;
-use bindings::C_KZG_RET;
+include!("bindings.rs");
+
 use libc::fopen;
 use std::ffi::CString;
 use std::mem::MaybeUninit;
 use std::os::unix::prelude::OsStrExt;
 use std::path::PathBuf;
-
-pub use bindings::{
-    Blob, BYTES_PER_BLOB, BYTES_PER_COMMITMENT, BYTES_PER_FIELD_ELEMENT, BYTES_PER_PROOF,
-    FIAT_SHAMIR_PROTOCOL_DOMAIN, FIELD_ELEMENTS_PER_BLOB,
-};
 
 pub const BYTES_PER_G1_POINT: usize = 48;
 pub const BYTES_PER_G2_POINT: usize = 96;
@@ -25,9 +20,9 @@ const NUM_G2_POINTS: usize = 65;
 #[derive(Debug)]
 pub enum Error {
     /// The KZG proof is invalid.
-    InvalidKzgProof(String),
+    InvalidKZGProof(String),
     /// The KZG commitment is invalid.
-    InvalidKzgCommitment(String),
+    InvalidKZGCommitment(String),
     /// The provided trusted setup is invalid.
     InvalidTrustedSetup(String),
     /// The underlying c-kzg library returned an error.
@@ -35,8 +30,7 @@ pub enum Error {
 }
 
 /// Holds the parameters of a kzg trusted setup ceremony.
-pub struct KzgSettings(bindings::KZGSettings);
-impl KzgSettings {
+impl KZGSettings {
     /// Initializes a trusted setup from `FIELD_ELEMENTS_PER_BLOB` g1 points
     /// and 65 g2 points in byte format.
     pub fn load_trusted_setup(
@@ -57,12 +51,12 @@ impl KzgSettings {
                 g2_bytes.len()
             )));
         }
-        let mut kzg_settings = MaybeUninit::<bindings::KZGSettings>::uninit();
+        let mut kzg_settings = MaybeUninit::<KZGSettings>::uninit();
         unsafe {
             let n1 = g1_bytes.len();
             let n2 = g2_bytes.len();
 
-            let res = bindings::load_trusted_setup(
+            let res = load_trusted_setup(
                 kzg_settings.as_mut_ptr(),
                 g1_bytes.as_ptr() as *const u8,
                 n1,
@@ -70,7 +64,7 @@ impl KzgSettings {
                 n2,
             );
             if let C_KZG_RET::C_KZG_OK = res {
-                Ok(Self(kzg_settings.assume_init()))
+                Ok(kzg_settings.assume_init())
             } else {
                 Err(Error::InvalidTrustedSetup(format!(
                     "Invalid trusted setup: {:?}",
@@ -90,12 +84,12 @@ impl KzgSettings {
         let file_path = CString::new(file_path.as_os_str().as_bytes()).map_err(|e| {
             Error::InvalidTrustedSetup(format!("Invalid trusted setup file: {:?}", e))
         })?;
-        let mut kzg_settings = MaybeUninit::<bindings::KZGSettings>::uninit();
+        let mut kzg_settings = MaybeUninit::<KZGSettings>::uninit();
         unsafe {
             let file_ptr = fopen(file_path.as_ptr(), &('r' as libc::c_char));
-            let res = bindings::load_trusted_setup_file(kzg_settings.as_mut_ptr(), file_ptr);
+            let res = load_trusted_setup_file(kzg_settings.as_mut_ptr(), file_ptr);
             if let C_KZG_RET::C_KZG_OK = res {
-                Ok(Self(kzg_settings.assume_init()))
+                Ok(kzg_settings.assume_init())
             } else {
                 Err(Error::InvalidTrustedSetup(format!(
                     "Invalid trusted setup: {:?}",
@@ -106,18 +100,16 @@ impl KzgSettings {
     }
 }
 
-impl Drop for KzgSettings {
+impl Drop for KZGSettings {
     fn drop(&mut self) {
-        unsafe { bindings::free_trusted_setup(&mut self.0) }
+        unsafe { free_trusted_setup(self) }
     }
 }
 
-pub struct KzgProof(bindings::KZGProof);
-
-impl KzgProof {
+impl KZGProof {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != BYTES_PER_PROOF {
-            return Err(Error::InvalidKzgProof(format!(
+            return Err(Error::InvalidKZGProof(format!(
                 "Invalid byte length. Expected {} got {}",
                 BYTES_PER_PROOF,
                 bytes.len(),
@@ -125,11 +117,11 @@ impl KzgProof {
         }
         let mut proof_bytes = [0; BYTES_PER_PROOF];
         proof_bytes.copy_from_slice(bytes);
-        Ok(Self(bindings::KZGProof { bytes: proof_bytes }))
+        Ok(Self { bytes: proof_bytes })
     }
 
     pub fn to_bytes(&self) -> [u8; BYTES_PER_G1_POINT] {
-        self.0.bytes
+        self.bytes
     }
 
     pub fn as_hex_string(&self) -> String {
@@ -138,18 +130,18 @@ impl KzgProof {
 
     pub fn compute_aggregate_kzg_proof(
         blobs: &[Blob],
-        kzg_settings: &KzgSettings,
+        kzg_settings: &KZGSettings,
     ) -> Result<Self, Error> {
-        let mut kzg_proof = MaybeUninit::<bindings::KZGProof>::uninit();
+        let mut kzg_proof = MaybeUninit::<KZGProof>::uninit();
         unsafe {
-            let res = bindings::compute_aggregate_kzg_proof(
+            let res = compute_aggregate_kzg_proof(
                 kzg_proof.as_mut_ptr(),
                 blobs.as_ptr() as *const u8,
                 blobs.len(),
-                &kzg_settings.0,
+                kzg_settings,
             );
             if let C_KZG_RET::C_KZG_OK = res {
-                Ok(Self(kzg_proof.assume_init()))
+                Ok(kzg_proof.assume_init())
             } else {
                 Err(Error::CError(res))
             }
@@ -159,23 +151,18 @@ impl KzgProof {
     pub fn verify_aggregate_kzg_proof(
         &self,
         blobs: &[Blob],
-        expected_kzg_commitments: &[KzgCommitment],
-        kzg_settings: &KzgSettings,
+        expected_kzg_commitments: &[KZGCommitment],
+        kzg_settings: &KZGSettings,
     ) -> Result<bool, Error> {
         let mut verified: MaybeUninit<bool> = MaybeUninit::uninit();
         unsafe {
-            // TODO: pass without allocating a vec
-            let res = bindings::verify_aggregate_kzg_proof(
+            let res = verify_aggregate_kzg_proof(
                 verified.as_mut_ptr(),
                 blobs.as_ptr() as *const u8,
-                expected_kzg_commitments
-                    .iter()
-                    .map(|c| c.0)
-                    .collect::<Vec<_>>()
-                    .as_ptr(),
+                expected_kzg_commitments.as_ptr() as *const KZGCommitment,
                 blobs.len(),
-                &self.0,
-                &kzg_settings.0,
+                self,
+                kzg_settings,
             );
             if let C_KZG_RET::C_KZG_OK = res {
                 Ok(verified.assume_init())
@@ -187,20 +174,20 @@ impl KzgProof {
 
     pub fn verify_kzg_proof(
         &self,
-        kzg_commitment: KzgCommitment,
+        kzg_commitment: KZGCommitment,
         z: [u8; BYTES_PER_FIELD_ELEMENT],
         y: [u8; BYTES_PER_FIELD_ELEMENT],
-        kzg_settings: &KzgSettings,
+        kzg_settings: &KZGSettings,
     ) -> Result<bool, Error> {
         let mut verified: MaybeUninit<bool> = MaybeUninit::uninit();
         unsafe {
-            let res = bindings::verify_kzg_proof(
+            let res = verify_kzg_proof(
                 verified.as_mut_ptr(),
-                &kzg_commitment.0,
+                &kzg_commitment,
                 z.as_ptr(),
                 y.as_ptr(),
-                &self.0,
-                &kzg_settings.0,
+                self,
+                kzg_settings,
             );
             if let C_KZG_RET::C_KZG_OK = res {
                 Ok(verified.assume_init())
@@ -211,12 +198,10 @@ impl KzgProof {
     }
 }
 
-pub struct KzgCommitment(bindings::KZGCommitment);
-
-impl KzgCommitment {
+impl KZGCommitment {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != BYTES_PER_COMMITMENT {
-            return Err(Error::InvalidKzgCommitment(format!(
+            return Err(Error::InvalidKZGCommitment(format!(
                 "Invalid byte length. Expected {} got {}",
                 BYTES_PER_PROOF,
                 bytes.len(),
@@ -224,26 +209,22 @@ impl KzgCommitment {
         }
         let mut commitment = [0; BYTES_PER_COMMITMENT];
         commitment.copy_from_slice(bytes);
-        Ok(Self(bindings::KZGCommitment { bytes: commitment }))
+        Ok(Self { bytes: commitment })
     }
 
     pub fn to_bytes(&self) -> [u8; BYTES_PER_G1_POINT] {
-        self.0.bytes
+        self.bytes
     }
 
     pub fn as_hex_string(&self) -> String {
         hex::encode(self.to_bytes())
     }
 
-    pub fn blob_to_kzg_commitment(mut blob: Blob, kzg_settings: &KzgSettings) -> Self {
-        let mut kzg_commitment: MaybeUninit<bindings::KZGCommitment> = MaybeUninit::uninit();
+    pub fn blob_to_kzg_commitment(mut blob: Blob, kzg_settings: &KZGSettings) -> Self {
+        let mut kzg_commitment: MaybeUninit<KZGCommitment> = MaybeUninit::uninit();
         unsafe {
-            bindings::blob_to_kzg_commitment(
-                kzg_commitment.as_mut_ptr(),
-                blob.as_mut_ptr(),
-                &kzg_settings.0,
-            );
-            Self(kzg_commitment.assume_init())
+            blob_to_kzg_commitment(kzg_commitment.as_mut_ptr(), blob.as_mut_ptr(), kzg_settings);
+            kzg_commitment.assume_init()
         }
     }
 }
@@ -267,20 +248,20 @@ mod tests {
     fn test_simple(trusted_setup_file: PathBuf) {
         let mut rng = rand::thread_rng();
         assert!(trusted_setup_file.exists());
-        let kzg_settings = KzgSettings::load_trusted_setup_file(trusted_setup_file).unwrap();
+        let kzg_settings = KZGSettings::load_trusted_setup_file(trusted_setup_file).unwrap();
 
         let num_blobs: usize = rng.gen_range(0..16);
         let mut blobs: Vec<Blob> = (0..num_blobs)
             .map(|_| generate_random_blob(&mut rng))
             .collect();
 
-        let kzg_commitments: Vec<KzgCommitment> = blobs
+        let kzg_commitments: Vec<KZGCommitment> = blobs
             .clone()
             .into_iter()
-            .map(|blob| KzgCommitment::blob_to_kzg_commitment(blob, &kzg_settings))
+            .map(|blob| KZGCommitment::blob_to_kzg_commitment(blob, &kzg_settings))
             .collect();
 
-        let kzg_proof = KzgProof::compute_aggregate_kzg_proof(&blobs, &kzg_settings).unwrap();
+        let kzg_proof = KZGProof::compute_aggregate_kzg_proof(&blobs, &kzg_settings).unwrap();
 
         assert!(kzg_proof
             .verify_aggregate_kzg_proof(&blobs, &kzg_commitments, &kzg_settings)
@@ -310,7 +291,7 @@ mod tests {
     fn test_compute_agg_proof() {
         let trusted_setup_file = PathBuf::from("../../src/trusted_setup.txt");
         assert!(trusted_setup_file.exists());
-        let kzg_settings = KzgSettings::load_trusted_setup_file(trusted_setup_file).unwrap();
+        let kzg_settings = KZGSettings::load_trusted_setup_file(trusted_setup_file).unwrap();
 
         let test_file = PathBuf::from("test_vectors/public_agg_proof.json");
         let json_data: serde_json::Value =
@@ -344,11 +325,11 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
 
-            let proof = KzgProof::compute_aggregate_kzg_proof(&blobs, &kzg_settings).unwrap();
+            let proof = KZGProof::compute_aggregate_kzg_proof(&blobs, &kzg_settings).unwrap();
             assert_eq!(proof.as_hex_string(), expected_proof);
 
             for (i, blob) in blobs.into_iter().enumerate() {
-                let commitment = KzgCommitment::blob_to_kzg_commitment(blob, &kzg_settings);
+                let commitment = KZGCommitment::blob_to_kzg_commitment(blob, &kzg_settings);
                 assert_eq!(
                     commitment.as_hex_string().as_str(),
                     expected_kzg_commitments[i]
@@ -362,7 +343,7 @@ mod tests {
     fn test_verify_kzg_proof() {
         let trusted_setup_file = PathBuf::from("../../src/trusted_setup.txt");
         assert!(trusted_setup_file.exists());
-        let kzg_settings = KzgSettings::load_trusted_setup_file(trusted_setup_file).unwrap();
+        let kzg_settings = KZGSettings::load_trusted_setup_file(trusted_setup_file).unwrap();
 
         let test_file = PathBuf::from("test_vectors/public_verify_kzg_proof.json");
         let json_data: serde_json::Value =
@@ -371,11 +352,11 @@ mod tests {
         let tests = json_data.get("TestCases").unwrap().as_array().unwrap();
         for test in tests.iter() {
             let proof = test.get("Proof").unwrap().as_str().unwrap();
-            let kzg_proof = KzgProof::from_bytes(&hex::decode(proof).unwrap()).unwrap();
+            let kzg_proof = KZGProof::from_bytes(&hex::decode(proof).unwrap()).unwrap();
 
             let commitment = test.get("Commitment").unwrap().as_str().unwrap();
             let kzg_commitment =
-                KzgCommitment::from_bytes(&hex::decode(commitment).unwrap()).unwrap();
+                KZGCommitment::from_bytes(&hex::decode(commitment).unwrap()).unwrap();
 
             let z = test.get("InputPoint").unwrap().as_str().unwrap();
             let mut z_bytes = [0; BYTES_PER_FIELD_ELEMENT];

@@ -2,6 +2,8 @@
 
 include!("./consts.rs");
 
+use std::ops::{Deref, DerefMut};
+
 use libc::FILE;
 
 pub const BYTES_PER_COMMITMENT: usize = 48;
@@ -75,16 +77,69 @@ pub struct blst_p2_affine {
     pub y: blst_fp2,
 }
 
-pub const FIAT_SHAMIR_PROTOCOL_DOMAIN: [u8; 16usize] = [
-    70, 83, 66, 76, 79, 66, 86, 69, 82, 73, 70, 89, 95, 86, 49, 95,
-];
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct BLSFieldElement {
+    pub bytes: [u8; 32usize],
+}
+
+impl Deref for BLSFieldElement {
+    type Target = [u8; 32];
+
+    fn deref(&self) -> &Self::Target {
+        &self.bytes
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Blob {
+    pub bytes: [u8; BYTES_PER_BLOB],
+}
+
+impl Deref for Blob {
+    type Target = [u8; BYTES_PER_BLOB];
+    fn deref(&self) -> &Self::Target {
+        &self.bytes
+    }
+}
+
+impl DerefMut for Blob {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.bytes
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct KZGProof {
+    pub bytes: [u8; 48usize],
+}
+
+impl Deref for KZGProof {
+    type Target = [u8; 48];
+    fn deref(&self) -> &Self::Target {
+        &self.bytes
+    }
+}
+
+pub const FIAT_SHAMIR_PROTOCOL_DOMAIN: &[u8; 17usize] = b"FSBLOBVERIFY_V1_\0";
 pub type g1_t = blst_p1;
 pub type g2_t = blst_p2;
 pub type fr_t = blst_fr;
-pub type KZGCommitment = g1_t;
-pub type KZGProof = g1_t;
-pub type BLSFieldElement = fr_t;
-pub type Blob = [u8; BYTES_PER_BLOB];
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct KZGCommitment {
+    pub bytes: [u8; 48usize],
+}
+
+impl Deref for KZGCommitment {
+    type Target = [u8; 48];
+    fn deref(&self) -> &Self::Target {
+        &self.bytes
+    }
+}
+
 #[repr(u32)]
 #[doc = " The common return type for all routines in which something can go wrong."]
 #[doc = ""]
@@ -116,61 +171,6 @@ pub struct FFTSettings {
     pub roots_of_unity: *const fr_t,
 }
 
-#[test]
-fn bindgen_test_layout_FFTSettings() {
-    const UNINIT: ::std::mem::MaybeUninit<FFTSettings> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<FFTSettings>(),
-        32usize,
-        concat!("Size of: ", stringify!(FFTSettings))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<FFTSettings>(),
-        8usize,
-        concat!("Alignment of ", stringify!(FFTSettings))
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).max_width) as usize - ptr as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(FFTSettings),
-            "::",
-            stringify!(max_width)
-        )
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).expanded_roots_of_unity) as usize - ptr as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(FFTSettings),
-            "::",
-            stringify!(expanded_roots_of_unity)
-        )
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reverse_roots_of_unity) as usize - ptr as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(FFTSettings),
-            "::",
-            stringify!(reverse_roots_of_unity)
-        )
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).roots_of_unity) as usize - ptr as usize },
-        24usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(FFTSettings),
-            "::",
-            stringify!(roots_of_unity)
-        )
-    );
-}
 #[doc = " Stores the setup and parameters needed for computing KZG proofs."]
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -190,65 +190,8 @@ pub struct KZGSettings {
 unsafe impl Sync for KZGSettings {}
 unsafe impl Send for KZGSettings {}
 
-#[test]
-fn bindgen_test_layout_KZGSettings() {
-    const UNINIT: ::std::mem::MaybeUninit<KZGSettings> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<KZGSettings>(),
-        24usize,
-        concat!("Size of: ", stringify!(KZGSettings))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<KZGSettings>(),
-        8usize,
-        concat!("Alignment of ", stringify!(KZGSettings))
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fs) as usize - ptr as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(KZGSettings),
-            "::",
-            stringify!(fs)
-        )
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).g1_values) as usize - ptr as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(KZGSettings),
-            "::",
-            stringify!(g1_values)
-        )
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).g2_values) as usize - ptr as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(KZGSettings),
-            "::",
-            stringify!(g2_values)
-        )
-    );
-}
 extern "C" {
     #[doc = " Interface functions"]
-    pub fn bytes_to_g1(out: *mut g1_t, in_: *const u8) -> C_KZG_RET;
-}
-extern "C" {
-    pub fn bytes_from_g1(out: *mut u8, in_: *const g1_t);
-}
-extern "C" {
-    pub fn bytes_to_bls_field(out: *mut BLSFieldElement, in_: *const u8) -> C_KZG_RET;
-}
-extern "C" {
-    pub fn load_trusted_setup_file(out: *mut KZGSettings, in_: *mut FILE) -> C_KZG_RET;
-}
-extern "C" {
     pub fn load_trusted_setup(
         out: *mut KZGSettings,
         g1_bytes: *const u8, /* n1 * 48 bytes */
@@ -256,6 +199,9 @@ extern "C" {
         g2_bytes: *const u8, /* n2 * 96 bytes */
         n2: usize,
     ) -> C_KZG_RET;
+}
+extern "C" {
+    pub fn load_trusted_setup_file(out: *mut KZGSettings, in_: *mut FILE) -> C_KZG_RET;
 }
 extern "C" {
     pub fn free_trusted_setup(s: *mut KZGSettings);
@@ -279,7 +225,11 @@ extern "C" {
     ) -> C_KZG_RET;
 }
 extern "C" {
-    pub fn blob_to_kzg_commitment(out: *mut KZGCommitment, blob: *mut u8, s: *const KZGSettings);
+    pub fn blob_to_kzg_commitment(
+        out: *mut KZGCommitment,
+        blob: *mut u8,
+        s: *const KZGSettings,
+    ) -> C_KZG_RET;
 }
 extern "C" {
     pub fn verify_kzg_proof(

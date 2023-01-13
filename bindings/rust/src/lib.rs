@@ -3,7 +3,7 @@
 #![allow(non_snake_case)]
 
 mod bindings;
-use bindings::{g1_t, C_KZG_RET};
+use bindings::C_KZG_RET;
 use libc::fopen;
 use std::ffi::CString;
 use std::mem::MaybeUninit;
@@ -32,41 +32,6 @@ pub enum Error {
     InvalidTrustedSetup(String),
     /// The underlying c-kzg library returned an error.
     CError(C_KZG_RET),
-}
-
-pub fn bytes_to_g1(bytes: &[u8]) -> Result<g1_t, Error> {
-    let mut g1_point = MaybeUninit::<g1_t>::uninit();
-    unsafe {
-        let res = bindings::bytes_to_g1(g1_point.as_mut_ptr(), bytes.as_ptr());
-        if let C_KZG_RET::C_KZG_OK = res {
-            Ok(g1_point.assume_init())
-        } else {
-            Err(Error::CError(res))
-        }
-    }
-}
-
-pub fn bytes_from_g1(g1_point: g1_t) -> [u8; BYTES_PER_G1_POINT] {
-    let mut bytes = [0; 48];
-    unsafe { bindings::bytes_from_g1(bytes.as_mut_ptr(), &g1_point) }
-    bytes
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct BlsFieldElement(bindings::BLSFieldElement);
-
-impl BlsFieldElement {
-    pub fn bytes_to_bls_field(bytes: [u8; BYTES_PER_FIELD_ELEMENT]) -> Result<Self, Error> {
-        let mut bls_field_element = MaybeUninit::<bindings::BLSFieldElement>::uninit();
-        unsafe {
-            let res = bindings::bytes_to_bls_field(bls_field_element.as_mut_ptr(), bytes.as_ptr());
-            if let C_KZG_RET::C_KZG_OK = res {
-                Ok(Self(bls_field_element.assume_init()))
-            } else {
-                Err(Error::CError(res))
-            }
-        }
-    }
 }
 
 /// Holds the parameters of a kzg trusted setup ceremony.
@@ -160,11 +125,11 @@ impl KzgProof {
         }
         let mut proof_bytes = [0; BYTES_PER_PROOF];
         proof_bytes.copy_from_slice(bytes);
-        Ok(Self(bytes_to_g1(bytes)?))
+        Ok(Self(bindings::KZGProof { bytes: proof_bytes }))
     }
 
     pub fn to_bytes(&self) -> [u8; BYTES_PER_G1_POINT] {
-        bytes_from_g1(self.0)
+        self.0.bytes
     }
 
     pub fn as_hex_string(&self) -> String {
@@ -257,13 +222,13 @@ impl KzgCommitment {
                 bytes.len(),
             )));
         }
-        let mut proof_bytes = [0; BYTES_PER_COMMITMENT];
-        proof_bytes.copy_from_slice(bytes);
-        Ok(Self(bytes_to_g1(bytes)?))
+        let mut commitment = [0; BYTES_PER_COMMITMENT];
+        commitment.copy_from_slice(bytes);
+        Ok(Self(bindings::KZGCommitment { bytes: commitment }))
     }
 
     pub fn to_bytes(&self) -> [u8; BYTES_PER_G1_POINT] {
-        bytes_from_g1(self.0)
+        self.0.bytes
     }
 
     pub fn as_hex_string(&self) -> String {
@@ -289,14 +254,14 @@ mod tests {
     use rand::{rngs::ThreadRng, Rng};
 
     fn generate_random_blob(rng: &mut ThreadRng) -> Blob {
-        let mut arr: Blob = [0; BYTES_PER_BLOB];
+        let mut arr = [0u8; BYTES_PER_BLOB];
         rng.fill(&mut arr[..]);
         // Ensure that the blob is canonical by ensuring that
         // each field element contained in the blob is < BLS_MODULUS
         for i in 0..FIELD_ELEMENTS_PER_BLOB {
             arr[i * BYTES_PER_FIELD_ELEMENT + BYTES_PER_FIELD_ELEMENT - 1] = 0;
         }
-        arr
+        Blob { bytes: arr }
     }
 
     fn test_simple(trusted_setup_file: PathBuf) {
@@ -375,7 +340,7 @@ mod tests {
                     let blob = hex::decode(data).unwrap();
                     let mut blob_data = [0; BYTES_PER_BLOB];
                     blob_data.copy_from_slice(&blob);
-                    blob_data
+                    Blob { bytes: blob_data }
                 })
                 .collect::<Vec<_>>();
 

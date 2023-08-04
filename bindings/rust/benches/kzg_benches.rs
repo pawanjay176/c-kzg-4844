@@ -36,7 +36,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let commitments: Vec<Bytes48> = blobs
         .iter()
         .map(|blob| {
-            KzgCommitment::blob_to_kzg_commitment(blob.clone(), &kzg_settings)
+            KzgCommitment::blob_to_kzg_commitment(&blob, &kzg_settings)
                 .unwrap()
                 .to_bytes()
         })
@@ -56,7 +56,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("blob_to_kzg_commitment", |b| {
         b.iter(|| {
-            KzgCommitment::blob_to_kzg_commitment(blobs.first().unwrap().clone(), &kzg_settings)
+            KzgCommitment::blob_to_kzg_commitment(blobs.first().unwrap(), &kzg_settings)
                 .unwrap()
         })
     });

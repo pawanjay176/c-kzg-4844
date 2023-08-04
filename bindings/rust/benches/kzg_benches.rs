@@ -45,7 +45,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         .iter()
         .zip(commitments.iter())
         .map(|(blob, commitment)| {
-            KzgProof::compute_blob_kzg_proof(blob.clone(), *commitment, &kzg_settings)
+            KzgProof::compute_blob_kzg_proof(blob, *commitment, &kzg_settings)
                 .unwrap()
                 .to_bytes()
         })
@@ -63,7 +63,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("compute_kzg_proof", |b| {
         b.iter(|| {
             KzgProof::compute_kzg_proof(
-                blobs.first().unwrap().clone(),
+                blobs.first().unwrap(),
                 *fields.first().unwrap(),
                 &kzg_settings,
             )
@@ -73,7 +73,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("compute_blob_kzg_proof", |b| {
         b.iter(|| {
             KzgProof::compute_blob_kzg_proof(
-                blobs.first().unwrap().clone(),
+                blobs.first().unwrap(),
                 *commitments.first().unwrap(),
                 &kzg_settings,
             )
@@ -95,7 +95,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("verify_blob_kzg_proof", |b| {
         b.iter(|| {
             KzgProof::verify_blob_kzg_proof(
-                blobs.first().unwrap().clone(),
+                &blobs.first().unwrap(),
                 *commitments.first().unwrap(),
                 *proofs.first().unwrap(),
                 &kzg_settings,

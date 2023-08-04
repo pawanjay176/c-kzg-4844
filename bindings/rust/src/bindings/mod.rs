@@ -578,7 +578,7 @@ mod tests {
             .iter()
             .zip(commitments.iter())
             .map(|(blob, commitment)| {
-                KZGProof::compute_blob_kzg_proof(blob.clone(), *commitment, &kzg_settings).unwrap()
+                KZGProof::compute_blob_kzg_proof(&blob, *commitment, &kzg_settings).unwrap()
             })
             .map(|proof| proof.to_bytes())
             .collect();
@@ -674,7 +674,7 @@ mod tests {
                 continue;
             };
 
-            match KZGProof::compute_kzg_proof(blob, z, &kzg_settings) {
+            match KZGProof::compute_kzg_proof(&blob, z, &kzg_settings) {
                 Ok((proof, y)) => {
                     assert_eq!(proof.bytes, test.get_output().unwrap().0.bytes);
                     assert_eq!(y.bytes, test.get_output().unwrap().1.bytes);
@@ -707,7 +707,7 @@ mod tests {
                 continue;
             };
 
-            match KZGProof::compute_blob_kzg_proof(blob, commitment, &kzg_settings) {
+            match KZGProof::compute_blob_kzg_proof(&blob, commitment, &kzg_settings) {
                 Ok(res) => assert_eq!(res.bytes, test.get_output().unwrap().bytes),
                 _ => assert!(test.get_output().is_none()),
             }
@@ -770,7 +770,7 @@ mod tests {
                 continue;
             };
 
-            match KZGProof::verify_blob_kzg_proof(blob, commitment, proof, &kzg_settings) {
+            match KZGProof::verify_blob_kzg_proof(&blob, commitment, proof, &kzg_settings) {
                 Ok(res) => assert_eq!(res, test.get_output().unwrap()),
                 _ => assert!(test.get_output().is_none()),
             }

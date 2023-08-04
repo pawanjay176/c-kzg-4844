@@ -57,6 +57,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("blob_to_kzg_commitment", |b| {
         b.iter(|| {
             KzgCommitment::blob_to_kzg_commitment(blobs.first().unwrap().clone(), &kzg_settings)
+                .unwrap()
         })
     });
 
@@ -67,6 +68,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 *fields.first().unwrap(),
                 &kzg_settings,
             )
+            .unwrap()
         })
     });
 
@@ -77,6 +79,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 *commitments.first().unwrap(),
                 &kzg_settings,
             )
+            .unwrap()
         })
     });
 
@@ -89,6 +92,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 *proofs.first().unwrap(),
                 &kzg_settings,
             )
+            .unwrap()
         })
     });
 
@@ -100,6 +104,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 *proofs.first().unwrap(),
                 &kzg_settings,
             )
+            .unwrap()
         })
     });
 

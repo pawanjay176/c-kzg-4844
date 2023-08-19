@@ -55,7 +55,7 @@ public class CKZG4844JNITest {
             .map(String::toUpperCase)
             .map(Preset::valueOf)
             .orElse(Preset.MAINNET);
-    CKZG4844JNI.loadNativeLibrary(PRESET);
+    CKZG4844JNI.loadNativeLibrary();
   }
 
   @ParameterizedTest

@@ -26,7 +26,7 @@ libc = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = { git = "https://github.com/bheisler/criterion.rs" , branch = "master" }
 glob = "0.3.1"
 rand = "0.8.5"
 serde_yaml = "0.9.17"
@@ -41,8 +41,3 @@ glob = "0.3"
 [[bench]]
 name = "kzg_benches"
 harness = false
-
-# The benchmarks crash on Windows with Rust 1.70. This is a band-aid fix for
-# that. Refer to #318 for more details. This should be removed if fixed.
-[profile.bench]
-opt-level = 0

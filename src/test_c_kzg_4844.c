@@ -1004,18 +1004,20 @@ static void test_evaluate_polynomial_in_evaluation_form__constant_polynomial(
     void
 ) {
     C_KZG_RET ret;
-    Polynomial p;
-    init_poly(&p, &s);
+    fr_t *p = NULL;
     fr_t x, y, c;
+
+    ret = new_fr_array(&p, s.poly_degree);
+    ASSERT_EQUALS(ret, C_KZG_OK);
 
     get_rand_fr(&c);
     get_rand_fr(&x);
 
     for (size_t i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
-        p.evals[i] = c;
+        p[i] = c;
     }
 
-    ret = evaluate_polynomial_in_evaluation_form(&y, &p, &x, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y, p, &x, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     ASSERT("evaluation matches constant", fr_equal(&y, &c));
@@ -1025,18 +1027,20 @@ static void
 test_evaluate_polynomial_in_evaluation_form__constant_polynomial_in_range(void
 ) {
     C_KZG_RET ret;
-    Polynomial p;
-    init_poly(&p, &s);
+    fr_t *p = NULL;
     fr_t x, y, c;
+
+    ret = new_fr_array(&p, s.poly_degree);
+    ASSERT_EQUALS(ret, C_KZG_OK);
 
     get_rand_fr(&c);
     x = s.roots_of_unity[123];
 
     for (size_t i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
-        p.evals[i] = c;
+        p[i] = c;
     }
 
-    ret = evaluate_polynomial_in_evaluation_form(&y, &p, &x, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y, p, &x, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     ASSERT("evaluation matches constant", fr_equal(&y, &c));
@@ -1046,22 +1050,24 @@ static void test_evaluate_polynomial_in_evaluation_form__random_polynomial(void
 ) {
     C_KZG_RET ret;
     fr_t poly_coefficients[FIELD_ELEMENTS_PER_BLOB];
-    Polynomial p;
-    init_poly(&p, &s);
+    fr_t *p = NULL;
     fr_t x, y, check;
+
+    ret = new_fr_array(&p, s.poly_degree);
+    ASSERT_EQUALS(ret, C_KZG_OK);
 
     for (size_t i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
         get_rand_fr(&poly_coefficients[i]);
     }
 
     for (size_t i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
-        eval_poly(&p.evals[i], poly_coefficients, &s.roots_of_unity[i]);
+        eval_poly(&p[i], poly_coefficients, &s.roots_of_unity[i]);
     }
 
     get_rand_fr(&x);
     eval_poly(&check, poly_coefficients, &x);
 
-    ret = evaluate_polynomial_in_evaluation_form(&y, &p, &x, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y, p, &x, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     ASSERT("evaluation methods match", fr_equal(&y, &check));
@@ -1070,7 +1076,7 @@ static void test_evaluate_polynomial_in_evaluation_form__random_polynomial(void
 
     eval_poly(&check, poly_coefficients, &x);
 
-    ret = evaluate_polynomial_in_evaluation_form(&y, &p, &x, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y, p, &x, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     ASSERT("evaluation methods match", fr_equal(&y, &check));
@@ -1116,13 +1122,14 @@ static void test_is_power_of_two__fails_not_powers_of_two(void) {
 static void test_compute_kzg_proof__succeeds_expected_proof(void) {
     C_KZG_RET ret;
     uint8_t *blob = NULL;
-    Polynomial poly;
-    init_poly(&poly, &s);
+    fr_t *poly = NULL;
     fr_t y_fr, z_fr;
     Bytes32 input_value, output_value, field_element, expected_output_value;
     Bytes48 proof, expected_proof;
     int diff;
 
+    ret = new_fr_array(&poly, s.poly_degree);
+    ASSERT_EQUALS(ret, C_KZG_OK);
     ret = c_kzg_malloc((void **)&blob, s.bytes_per_blob);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
@@ -1159,13 +1166,13 @@ static void test_compute_kzg_proof__succeeds_expected_proof(void) {
     ASSERT_EQUALS(diff, 0);
 
     /* Get the expected y by evaluating the polynomial at input_value */
-    ret = blob_to_polynomial(&poly, blob, &s);
+    ret = blob_to_polynomial(poly, blob, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     ret = bytes_to_bls_field(&z_fr, &input_value);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
-    ret = evaluate_polynomial_in_evaluation_form(&y_fr, &poly, &z_fr, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y_fr, poly, &z_fr, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     bytes_from_bls_field(&expected_output_value, &y_fr);
@@ -1183,12 +1190,13 @@ static void test_compute_and_verify_kzg_proof__succeeds_round_trip(void) {
     Bytes32 z, y, computed_y;
     KZGCommitment c;
     uint8_t *blob = NULL;
-    Polynomial poly;
-    init_poly(&poly, &s);
+    fr_t *poly = NULL;
     fr_t y_fr, z_fr;
     bool ok;
     int diff;
 
+    ret = new_fr_array(&poly, s.poly_degree);
+    ASSERT_EQUALS(ret, C_KZG_OK);
     ret = c_kzg_malloc((void **)&blob, s.bytes_per_blob);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
@@ -1207,7 +1215,7 @@ static void test_compute_and_verify_kzg_proof__succeeds_round_trip(void) {
      * Now let's attempt to verify the proof.
      * First convert the blob to field elements.
      */
-    ret = blob_to_polynomial(&poly, blob, &s);
+    ret = blob_to_polynomial(poly, blob, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     /* Also convert z to a field element */
@@ -1215,7 +1223,7 @@ static void test_compute_and_verify_kzg_proof__succeeds_round_trip(void) {
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     /* Now evaluate the poly at `z` to learn `y` */
-    ret = evaluate_polynomial_in_evaluation_form(&y_fr, &poly, &z_fr, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y_fr, poly, &z_fr, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     /* Now also get `y` in bytes */
@@ -1236,14 +1244,15 @@ static void test_compute_and_verify_kzg_proof__succeeds_within_domain(void) {
         C_KZG_RET ret;
         uint8_t *blob = NULL;
         KZGCommitment c;
-        Polynomial poly;
-        init_poly(&poly, &s);
+        fr_t *poly = NULL;
         Bytes48 proof;
         Bytes32 z, y, computed_y;
         fr_t y_fr, z_fr;
         bool ok;
         int diff;
 
+        ret = new_fr_array(&poly, s.poly_degree);
+        ASSERT_EQUALS(ret, C_KZG_OK);
         ret = c_kzg_malloc((void **)&blob, s.bytes_per_blob);
         ASSERT_EQUALS(ret, C_KZG_OK);
 
@@ -1254,7 +1263,7 @@ static void test_compute_and_verify_kzg_proof__succeeds_within_domain(void) {
         ASSERT_EQUALS(ret, C_KZG_OK);
 
         /* Get the polynomial version of the blob */
-        ret = blob_to_polynomial(&poly, blob, &s);
+        ret = blob_to_polynomial(poly, blob, &s);
         ASSERT_EQUALS(ret, C_KZG_OK);
 
         z_fr = s.roots_of_unity[i];
@@ -1265,7 +1274,7 @@ static void test_compute_and_verify_kzg_proof__succeeds_within_domain(void) {
         ASSERT_EQUALS(ret, C_KZG_OK);
 
         /* Now evaluate the poly at `z` to learn `y` */
-        ret = evaluate_polynomial_in_evaluation_form(&y_fr, &poly, &z_fr, &s);
+        ret = evaluate_polynomial_in_evaluation_form(&y_fr, poly, &z_fr, &s);
         ASSERT_EQUALS(ret, C_KZG_OK);
 
         /* Now also get `y` in bytes */
@@ -1289,11 +1298,12 @@ static void test_compute_and_verify_kzg_proof__fails_incorrect_proof(void) {
     Bytes32 z, y, computed_y;
     KZGCommitment c;
     uint8_t *blob = NULL;
-    Polynomial poly;
-    init_poly(&poly, &s);
+    fr_t *poly = NULL;
     fr_t y_fr, z_fr;
     bool ok;
 
+    ret = new_fr_array(&poly, s.poly_degree);
+    ASSERT_EQUALS(ret, C_KZG_OK);
     ret = c_kzg_malloc((void **)&blob, s.bytes_per_blob);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
@@ -1312,7 +1322,7 @@ static void test_compute_and_verify_kzg_proof__fails_incorrect_proof(void) {
      * Now let's attempt to verify the proof.
      * First convert the blob to field elements.
      */
-    ret = blob_to_polynomial(&poly, blob, &s);
+    ret = blob_to_polynomial(poly, blob, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     /* Also convert z to a field element */
@@ -1320,7 +1330,7 @@ static void test_compute_and_verify_kzg_proof__fails_incorrect_proof(void) {
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     /* Now evaluate the poly at `z` to learn `y` */
-    ret = evaluate_polynomial_in_evaluation_form(&y_fr, &poly, &z_fr, &s);
+    ret = evaluate_polynomial_in_evaluation_form(&y_fr, poly, &z_fr, &s);
     ASSERT_EQUALS(ret, C_KZG_OK);
 
     /* Now also get `y` in bytes */

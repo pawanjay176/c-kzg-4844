@@ -1,9 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
-const MAINNET_FIELD_ELEMENTS_PER_BLOB: usize = 4096;
-const MINIMAL_FIELD_ELEMENTS_PER_BLOB: usize = 4;
-
 /// Compiles blst.
 //
 // NOTE: This code is taken from https://github.com/supranational/blst `build.rs` `main`. The crate
@@ -103,15 +100,6 @@ fn main() {
         .parent()
         .expect("bindings dir is nested");
 
-    let (lib_name, field_elements_per_blob) = if cfg!(feature = "minimal-spec") {
-        ("ckzg_min", MINIMAL_FIELD_ELEMENTS_PER_BLOB)
-    } else {
-        ("ckzg", MAINNET_FIELD_ELEMENTS_PER_BLOB)
-    };
-
-    eprintln!("Using LIB_PREFIX={lib_name}");
-    eprintln!("Using FIELD_ELEMENTS_PER_BLOB={field_elements_per_blob}");
-
     let blst_base_dir = root_dir.join("blst");
     compile_blst(blst_base_dir.clone());
 
@@ -127,11 +115,9 @@ fn main() {
 
     cc.include(blst_headers_dir.clone());
     cc.warnings(false);
-    cc.flag(format!("-DLIB_PREFIX={lib_name}").as_str());
-    cc.flag(format!("-DFIELD_ELEMENTS_PER_BLOB={}", field_elements_per_blob).as_str());
     cc.file(c_src_dir.join("c_kzg_4844.c"));
 
-    cc.try_compile(lib_name).expect("Failed to compile ckzg");
+    cc.try_compile("ckzg").expect("Failed to compile ckzg");
 
     // Tell cargo to search for the static blst exposed by the blst-bindings' crate.
     println!("cargo:rustc-link-lib=static=blst");
@@ -142,20 +128,16 @@ fn main() {
     let header_file = header_file_path.to_str().expect("valid header file");
 
     make_bindings(
-        lib_name,
-        field_elements_per_blob,
         header_file,
         &blst_headers_dir.to_string_lossy(),
         bindings_out_path,
     );
 
-    // Finally, tell cargo this provides ckzg/ckzg_min
-    println!("cargo:rustc-link-lib={lib_name}");
+    // Finally, tell cargo this provides ckzg
+    println!("cargo:rustc-link-lib=ckzg");
 }
 
 fn make_bindings<P>(
-    lib_name: &str,
-    field_elements_per_blob: usize,
     header_path: &str,
     blst_headers_dir: &str,
     bindings_out_path: P,
@@ -169,11 +151,9 @@ fn make_bindings<P>(
     impl bindgen::callbacks::ParseCallbacks for Callbacks {
         fn int_macro(&self, name: &str, _value: i64) -> Option<bindgen::callbacks::IntKind> {
             match name {
-                "FIELD_ELEMENTS_PER_BLOB"
                 | "BYTES_PER_COMMITMENT"
                 | "BYTES_PER_PROOF"
-                | "BYTES_PER_FIELD_ELEMENT"
-                | "BYTES_PER_BLOB" => Some(bindgen::callbacks::IntKind::Custom {
+                | "BYTES_PER_FIELD_ELEMENT" => Some(bindgen::callbacks::IntKind::Custom {
                     name: "usize",
                     is_signed: false,
                 }),
@@ -186,20 +166,8 @@ fn make_bindings<P>(
         /*
          * Header definitions.
          */
-        // Inject the constant as C code so that the C compiler can use it.
-        // -D is not supported by bindgen https://github.com/rust-lang/rust-bindgen/issues/2394
-        .header_contents(
-            "consts",
-            &format!(
-                "#define LIB_PREFIX {lib_name}
-                 #define FIELD_ELEMENTS_PER_BLOB {field_elements_per_blob}"
-            ),
-        )
         .header(header_path)
         .clang_args([format!("-I{blst_headers_dir}")])
-        // Since this is not part of the header file, needs to be allowed explicitly.
-        .allowlist_var("LIB_PREFIX")
-        .allowlist_var("FIELD_ELEMENTS_PER_BLOB")
         // Get bindings only for the header file.
         .allowlist_file(".*c_kzg_4844.h")
         /*
@@ -226,8 +194,6 @@ fn make_bindings<P>(
         .parse_callbacks(Box::new(Callbacks))
         // Add PartialEq and Eq impls to types.
         .derive_eq(true)
-        // Blobs are big, we don't want rust to liberally copy them around.
-        .no_copy("Blob")
         // Do not make fields public. If we want to modify them we can create setters/mutable
         // getters when necessary.
         .default_visibility(bindgen::FieldVisibilityKind::Private)

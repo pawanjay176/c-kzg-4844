@@ -250,6 +250,13 @@ impl KZGProof {
     ) -> Result<(Self, Bytes32), Error> {
         let mut kzg_proof = MaybeUninit::<KZGProof>::uninit();
         let mut y_out = MaybeUninit::<Bytes32>::uninit();
+        if blob.bytes.len() != kzg_settings.bytes_per_blob {
+            return Err(Error::MismatchLength(format!(
+                "Blob has {} bytes, expected {} bytes",
+                blob.bytes.len(),
+                kzg_settings.bytes_per_blob
+            )));
+        }
         unsafe {
             let res = compute_kzg_proof(
                 kzg_proof.as_mut_ptr(),
@@ -272,6 +279,13 @@ impl KZGProof {
         kzg_settings: &KZGSettings,
     ) -> Result<Self, Error> {
         let mut kzg_proof = MaybeUninit::<KZGProof>::uninit();
+        if blob.bytes.len() != kzg_settings.bytes_per_blob {
+            return Err(Error::MismatchLength(format!(
+                "Blob has {} bytes, expected {} bytes",
+                blob.bytes.len(),
+                kzg_settings.bytes_per_blob
+            )));
+        }
         unsafe {
             let res = compute_blob_kzg_proof(
                 kzg_proof.as_mut_ptr(),
@@ -319,6 +333,13 @@ impl KZGProof {
         kzg_settings: &KZGSettings,
     ) -> Result<bool, Error> {
         let mut verified: MaybeUninit<bool> = MaybeUninit::uninit();
+        if blob.bytes.len() != kzg_settings.bytes_per_blob {
+            return Err(Error::MismatchLength(format!(
+                "Blob has {} bytes, expected {} bytes",
+                blob.bytes.len(),
+                kzg_settings.bytes_per_blob
+            )));
+        }
         unsafe {
             let res = verify_blob_kzg_proof(
                 verified.as_mut_ptr(),
@@ -358,6 +379,13 @@ impl KZGProof {
 
         let mut flatBlobs: Vec<u8> = Vec::with_capacity(blobs.len() * kzg_settings.bytes_per_blob);
         for blob in blobs {
+            if blob.bytes.len() != kzg_settings.bytes_per_blob {
+                return Err(Error::MismatchLength(format!(
+                    "Blob has {} bytes, expected {} bytes",
+                    blob.bytes.len(),
+                    kzg_settings.bytes_per_blob
+                )));
+            }
             flatBlobs.extend_from_slice(&blob.bytes);
         }
 
@@ -404,6 +432,13 @@ impl KZGCommitment {
 
     pub fn blob_to_kzg_commitment(blob: Blob, kzg_settings: &KZGSettings) -> Result<Self, Error> {
         let mut kzg_commitment: MaybeUninit<KZGCommitment> = MaybeUninit::uninit();
+        if blob.bytes.len() != kzg_settings.bytes_per_blob {
+            return Err(Error::MismatchLength(format!(
+                "Blob has {} bytes, expected {} bytes",
+                blob.bytes.len(),
+                kzg_settings.bytes_per_blob
+            )));
+        }
         unsafe {
             let res = blob_to_kzg_commitment(
                 kzg_commitment.as_mut_ptr(),

@@ -115,9 +115,7 @@ func (b *Blob) UnmarshalText(input []byte) error {
 	if len(bytes) != BytesPerBlob {
 		return ErrBadArgs
 	}
-	//*b = bytes
-	*b = make(Blob, BytesPerBlob)
-	copy(*b, bytes)
+	*b = bytes
 	return nil
 }
 
@@ -217,6 +215,9 @@ func BlobToKZGCommitment(blob Blob) (KZGCommitment, error) {
 		panic("trusted setup isn't loaded")
 	}
 	commitment := KZGCommitment{}
+	if len(blob) != BytesPerBlob {
+		return commitment, ErrBadArgs
+	}
 	ret := C.blob_to_kzg_commitment(
 		(*C.KZGCommitment)(unsafe.Pointer(&commitment)),
 		*(**C.uint8_t)(unsafe.Pointer(&blob)),
@@ -240,6 +241,9 @@ func ComputeKZGProof(blob Blob, zBytes Bytes32) (KZGProof, Bytes32, error) {
 	}
 	proof := KZGProof{}
 	y := Bytes32{}
+	if len(blob) != BytesPerBlob {
+		return proof, y, ErrBadArgs
+	}
 	ret := C.compute_kzg_proof(
 		(*C.KZGProof)(unsafe.Pointer(&proof)),
 		(*C.Bytes32)(unsafe.Pointer(&y)),
@@ -263,6 +267,9 @@ func ComputeBlobKZGProof(blob Blob, commitmentBytes Bytes48) (KZGProof, error) {
 		panic("trusted setup isn't loaded")
 	}
 	proof := KZGProof{}
+	if len(blob) != BytesPerBlob {
+		return proof, ErrBadArgs
+	}
 	ret := C.compute_blob_kzg_proof(
 		(*C.KZGProof)(unsafe.Pointer(&proof)),
 		*(**C.uint8_t)(unsafe.Pointer(&blob)),
@@ -311,6 +318,9 @@ func VerifyBlobKZGProof(blob Blob, commitmentBytes, proofBytes Bytes48) (bool, e
 	if !loaded {
 		panic("trusted setup isn't loaded")
 	}
+	if len(blob) != BytesPerBlob {
+		return false, ErrBadArgs
+	}
 	var result C.bool
 	ret := C.verify_blob_kzg_proof(
 		&result,
@@ -341,6 +351,9 @@ func VerifyBlobKZGProofBatch(blobs []Blob, commitmentsBytes, proofsBytes []Bytes
 
 	flatBlobs := make(Blob, BytesPerBlob*len(blobs))
 	for i, blob := range blobs {
+		if len(blob) != BytesPerBlob {
+			return false, ErrBadArgs
+		}
 		copy(flatBlobs[i*BytesPerBlob:], blob)
 	}
 
